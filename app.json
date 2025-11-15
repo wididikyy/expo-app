@@ -1,6 +1,9 @@
 {
   "expo": {
     "name": "expo-app",
+    "extra": {
+      "geminiApiKey": "AIzaSyCPs-smwxb1L595rNr_rh8a3eVrUqdzmIo"
+    },
     "slug": "expo-app",
     "version": "1.0.0",
     "orientation": "portrait",
