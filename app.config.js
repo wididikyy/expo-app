@@ -14,15 +14,27 @@ export default {
       geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY,
     },
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      bundleIdentifier: "com.stikom.expoapp"
     },
     android: {
+      // TAMBAHKAN INI - Package name untuk Android
+      package: "com.stikom.expoapp",
+      versionCode: 1,
+      // Adaptive icon config
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
         backgroundImage: "./assets/images/android-icon-background.png",
         monochromeImage: "./assets/images/android-icon-monochrome.png"
       },
+      // Permissions yang dibutuhkan
+      permissions: [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false
     },
@@ -42,6 +54,19 @@ export default {
           dark: {
             backgroundColor: "#000000"
           }
+        }
+      ],
+      // Tambahkan plugin untuk camera & image picker jika perlu
+      [
+        "expo-camera",
+        {
+          cameraPermission: "Allow app to access your camera."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "Allow app to access your photos."
         }
       ]
     ],
