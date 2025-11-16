@@ -12,6 +12,9 @@ export default {
     newArchEnabled: true,
     extra: {
       geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY,
+      eas: {
+        projectId: "dc22c9a1-ec2f-4731-9b7b-64d95282fee4"
+      }
     },
     ios: {
       supportsTablet: true,
