@@ -23,6 +23,7 @@ const MAPPING = {
   'camera.fill': 'photo-camera',
   'photo.fill': 'photo-library',
   'doc.fill': 'description',
+  'gearshape.fill': 'settings',
 } as IconMapping;
 
 /**

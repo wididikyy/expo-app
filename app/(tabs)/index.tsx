@@ -2,16 +2,22 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useAuth } from '@/contexts/AuthContext';
 import { chatWithReviewer } from '@/services/sinta-service';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 
 interface Message {
@@ -21,18 +27,28 @@ interface Message {
 }
 
 interface AIReviewerChatProps {
-  journalContext: string;
+  journalContext?: string;
   initialAnalysis?: string;
 }
 
 export default function HomeScreen({ 
-  journalContext, 
+  journalContext = 'General journal review', 
   initialAnalysis 
-}: AIReviewerChatProps) {
+}: AIReviewerChatProps = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  // Generate avatar URL from user email
+  const getAvatarUrl = () => {
+    const name = user?.email?.split('@')[0] || 'User';
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=007AFF&color=fff&size=128`;
+  };
 
   useEffect(() => {
     // Initial greeting from AI
@@ -61,6 +77,30 @@ export default function HomeScreen({
     "Review my references",
   ];
 
+  const handleLogout = () => {
+    setShowDropdown(false);
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/(auth)/login' as any);
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const sendMessage = async (text?: string) => {
     const messageText = text || input.trim();
     if (!messageText || loading) return;
@@ -78,7 +118,6 @@ export default function HomeScreen({
 
     try {
       // Prepare chat history for API
-      // Skip initial assistant greeting and convert roles properly
       const chatHistory = messages
         .filter((msg, idx) => {
           // Skip initial assistant greeting if it's the first message
@@ -86,7 +125,7 @@ export default function HomeScreen({
           return true;
         })
         .map(msg => ({
-          role: msg.role, // Keep original role as chatWithReviewer handles conversion
+          role: msg.role,
           content: msg.content,
         }));
 
@@ -128,12 +167,40 @@ export default function HomeScreen({
       keyboardVerticalOffset={0}
     >
       <ThemedView style={styles.container}>
-        {/* Header */}
+        {/* Header with Avatar */}
         <ThemedView style={styles.header}>
-          <ThemedText style={styles.headerTitle}>AI Reviewer Chat</ThemedText>
-          <ThemedText style={styles.headerSubtitle}>
-            Ask questions about improving your journal
-          </ThemedText>
+          <View>
+            <ThemedText style={styles.headerTitle}>🤖 AI Reviewer</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>
+              Improve your journal quality
+            </ThemedText>
+          </View>
+          
+          {/* Avatar with Dropdown */}
+          <View>
+            <TouchableOpacity
+              style={styles.avatarButton}
+              onPress={() => setShowDropdown(!showDropdown)}
+            >
+              <Image
+                source={{ uri: getAvatarUrl() }}
+                style={styles.avatar}
+              />
+            </TouchableOpacity>
+
+            {/* Dropdown Menu */}
+            {showDropdown && (
+              <ThemedView style={styles.dropdown}>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={handleLogout}
+                >
+                  <IconSymbol name="arrow.right.square.fill" size={20} color="#FF3B30" />
+                  <ThemedText style={[styles.dropdownText, styles.logoutText]}>Logout</ThemedText>
+                </TouchableOpacity>
+              </ThemedView>
+            )}
+          </View>
         </ThemedView>
 
         {/* Quick Questions */}
@@ -215,7 +282,7 @@ export default function HomeScreen({
             maxLength={500}
           />
           <TouchableOpacity
-            style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+            style={[styles.sendButton, (loading || !input.trim()) && styles.sendButtonDisabled]}
             onPress={() => sendMessage()}
             disabled={loading || !input.trim()}
           >
@@ -227,6 +294,13 @@ export default function HomeScreen({
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
+
+      {/* Backdrop for dropdown */}
+      {showDropdown && (
+        <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -243,6 +317,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 24,
@@ -253,6 +330,58 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: '#666',
+  },
+  avatarButton: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 50,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    minWidth: 160,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  logoutText: {
+    color: '#FF3B30',
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: '#E5E5EA',
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
   quickQuestionsContainer: {
     backgroundColor: '#fff',
